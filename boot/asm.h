@@ -3,7 +3,7 @@
 
 // Segment types : Ex Dc RW Ac
 #define STA_X 8  // 如果是1，则在段中的代码是可执行的；如果是0，则是数据选择子（ds,ss,es,fs,gs）
-#define STA_C 4
+#define STA_C 4  // 
 #define STA_E 4
 #define STA_R 2
 #define STA_W 2

@@ -1,11 +1,14 @@
-
+#include <asm.h>
 .global start
 
 start:
 .code16
 	
 	cli # 禁止中断
-	cld # 设置
+	cld # 设置标志寄存器的标志位 DF 为0； STD DF = 1
+	    # es:di - ds:si; ((es)*16 + di) = ((ds)*16 + si)
+	    # movsb: DF = 0 : (si) = (si) + 1; (di) = (di) + 1; DF = 1 : (si) = (si) - 1; (di) = (di) - 1;
+	    # 若为movsw: 则根据一个字的位数来决定增减
 
 	# 设置数据段的相关寄存器（ds 数据段， ss 堆栈段， es 附加段）
 	xorw %ax, %ax
@@ -48,13 +51,13 @@ start:
 	orl $0x1, %eax
 	movl %eax, %cr0
 
-	# 
+	# ljmp : 长跳转指令 CS:EIP （0x8, $protcseg）= gdt[CS].base_addr + $protcseg = 0x0 * 16 + $protcseg
 	ljmp $PROT_MODE_CSEG, $protcseg
 
 .code32
 .protcseg
 
-	# 重新设定数据段寄存器的值
+	# 重新设定数据段寄存器的值, $PROT_MODE_DSEG 0x10
 	movw $PROT_MODE_DSEG, %ax
 	movw %ax, %ds
 	movw %ax, %ss
@@ -62,17 +65,20 @@ start:
 	movw %ax, %fs
 	movw %ax, %gs
 
+	# 设置 ebp寄存器
 	movl $0x0, %ebp
+	# 设置栈的其实位置 0x7c00 (因为栈是向下生长的，所以是从0x7c00 - 0x0)
 	movl $start, %esp
 	call bootmain
 
+# 数据段
 .data
-
+.p2align 2 # 4字节对齐
 gdt:
 	SEG_NULLASM
 	# type, base, limit(4G)
-	SEG_ASM(STA_X, 0x0, 0xffffffff) # 代码段；起始地址: 0x8 ；类型：可读 可执行；限制大小：4G
-	SEG_ASM(, 0x0, 0xffffffff) # 数据段；起始地址：0x10；类型：可写；限制大小：4G
+	SEG_ASM(STA_X|STA_R, 0x0, 0xffffffff) # 代码段；起始地址: 0x8 ；类型：可读 可执行；限制大小：4G
+	SEG_ASM(STA_R, 0x0, 0xffffffff) # 数据段；起始地址：0x10；类型：可写；限制大小：4G
 
 gdtsec:
 	.word 0x17 # gdt内存大小0x18 - 1
