@@ -26,5 +26,13 @@ typedef uintptr_t size_t;
 /* 文件偏移量 */
 typedef intptr_t off_t;
 
+/* 获取结构体 member 成员的偏移量 */
+#define offsetof(type, member) 
+	((size_t) (&((type *)0)->member ))	
+
+/* 获取结构体: 根据 ptr 指针 */
+#define to_struct(ptr, type, memeber) 
+	((type *)((char *)(ptr) - offsetof(type, memeber)))
+
 
 #endif

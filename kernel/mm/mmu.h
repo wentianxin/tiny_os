@@ -61,5 +61,26 @@ struct taskstate {
 	uint16_t ts_iomb;
 };
 
+// +--------10------+-------10-------+---------12----------+
+// | Page Directory |   Page Table   | Offset within Page  |
+// |      Index     |     Index      |                     |
+// +----------------+----------------+---------------------+
+//  \--- PDX(la) --/ \--- PTX(la) --/ \---- PGOFF(la) ----/
+//  \----------- PPN(la) -----------/
+//
 
+#define PPN(la) ((uintptr_t)(la) >> PTXSHIFT) // 右移12位, 即除以4096(一页)
+
+#define PGOFF(la) ((uintptr_t)(la) & 0xFFF)
+
+
+#define PTE_ADDR(pte)  ((uintptr_t)(pte) & ~0xFFF)
+#define PDE_ADDR(pde)  PTE_ADDR(pde)
+
+
+
+#define PTXSHIFT   22
+
+
+#define PTE_P           0x001                   // Present
 #endif
