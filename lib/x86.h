@@ -43,4 +43,9 @@ static inline void outb(uint32_t port, uint8_t data) {
 		);
 }
 
+static inline void lcr3(uintptr_t cr3) {
+	asm volatile (
+		"movw %0, %%cr3"::"r"(cr3):"memory"
+	)；
+}
 #endif
