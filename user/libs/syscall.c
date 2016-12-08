@@ -1,6 +1,6 @@
 #include <unistd.h>
 #include <stdarg.h>
-
+d
 #define MAX_ARGS   5
 
 /* 系统调用入口 */
@@ -13,6 +13,8 @@ static int syscall(int num, ...) {
         a[i] = va_arg(ap, uint32_t);
     }
     va_end(ap);
+
+
 	asm volatile (
 		"int %1;"
 		: "=a" (ret)

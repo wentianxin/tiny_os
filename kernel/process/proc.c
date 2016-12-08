@@ -75,7 +75,7 @@ int kernel_thread(int (*fn)(void *), void *arg) {
 }
 
 void forkret(void) {
-	forkrets(current);
+	forkrets();
 }
 
 void proc_run(struct proc_struct *proc) {
