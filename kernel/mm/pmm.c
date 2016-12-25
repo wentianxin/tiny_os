@@ -52,6 +52,13 @@ static inline void gdt_init()
 	ltr(GD_TSS);
 }
 
+/**
+ * change the esp0 in default task state segment
+ */
+void load_esp0(uintptr_t esp0) {
+	ts.ts_esp0 = esp0;
+}
+
 static void init_pmm_manager(void) {
 	pmm_manager = &default_pmm_manager;
 	pmm_manager->init();

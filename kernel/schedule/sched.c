@@ -4,7 +4,6 @@
  * 进程调度
  */
 void schedule(void) {
-
 	struct proc_struct *next = NULL;
 
 	list_entry_t *le, *last;
@@ -25,6 +24,7 @@ void schedule(void) {
 	} while (le != last);
 
 	if (next == NULL || next->state != PROC_RUNNABLE) {
+		// not found
 		next = idleproc;
 	}
 	if (next != current) {

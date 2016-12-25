@@ -32,5 +32,4 @@ __trapret:
 forkrets:
 	
 	
-	
 	jmp __trapret
