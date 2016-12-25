@@ -15,6 +15,4 @@ int kern_init()
 	intr_enable();//
 
 	cpu_idle();
-
-
 }

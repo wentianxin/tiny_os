@@ -81,6 +81,9 @@ struct taskstate {
 
 #define PTXSHIFT   22
 
+/* 页表/页目录项标志 */
+#define PTE_P        0x001                   // Present(resident in memory not swapped out)
+#define PTE_W        0x002
+#define PTE_U        0x004
 
-#define PTE_P           0x001                   // Present
 #endif

@@ -1,55 +1,87 @@
-#include <default_pmm.h>
-#include <list.h>
+#include "default_pmm.h"
 
-static free_area_t free_area; // 确保无法被外部文件访问(OO)
+// 空闲链表
+static free_area_t free_area;
 
 #define free_list (free_area.free_list)
-#define nr_free (free_area.nr_free)
+#define nr_free(free.area.nr_free)
 
+/**
+ * 内存管理初始化
+ */
 static void default_init(void) {
 	list_init(&free_list);
 	nr_free = 0;
 }
 
-static void default_init_memmap(struct Page *base, size_t n) {
-	struct Page *p = base;
-	for (; p != base + n; p++) {
-		set_page_ref(p, 0)
-		p->flags = 0;
-		list_add(&free_list, p);
+/**
+ * 物理地址(base << 12) 映射为页帧
+ * base 指针指向页帧的存储位置
+ * n    添加(映射)的页帧数
+ */
+static void default_memmap_init(struct page *base, size_t n) {
+	struct page *page = base;
+	for (; page != base + n; page++) {
+		page->ref = 0;
+		page->flags = 0;
+		list_add(&free_list, &base->page_link);
 	}
 	nr_free += n;
 }
 
 /**
- * 返回 struct Page 指针, 存放指针自身是虚拟地址,而指针的指向是物理地址
+ * 分配页帧(暂时只实现了只能分配一个页帧)
+ * return 返回一个空闲页帧; 倘若页帧数为0, 返回NULL
  */
-static struct Page *
-default_alloc_pages(size_t n) {
-	// 目前只实现分配一个物理页
-	assert(n == 1);
-	list_entry_t *le;
-	if ((le = list_next(&free_list)) != &free_list) {
+static struct page* default_alloc_page(size_t n) {
+	asset(n == 1); // 检测
+	struct page *page = NULL;
+	list_entry_t le;
+	if ((le = list.next(&free_list)) != NULL) {
 		nr_free--;
 		list_del(le);
-		return le2page(le, page_link);
+		return le2page(le);
 	}
 	return NULL;
 }
 
-static void default_free_pages(struct Page *base, size_t n) {
+/**
+ * 释放页帧(默认只能释放一页页帧)
+ */
+static void default_free_page(struct page *base, size_t n) {
+	// 检测n是否为1 && 检测base 页帧是否是保留页
+	assert(n == 1 && !PageReserved(base))
+	base->ref = 0;  // TODO 应该改为原则操作 set_page_ref(base, 0)
 	base->flags = 0;
 	nr_free++;
-	set_page_ref(base, 0);
 	list_add(&free_list, &(base->page_link));
 }
 
-const struct pmm_manager default_pmm_manager = {
-    .name = "default_pmm_manager",
-    .init = default_init,
-    .init_memmap = default_init_memmap,
-    .alloc_pages = default_alloc_pages,
-    .free_pages = default_free_pages,
-    .nr_free_pages = default_nr_free_pages,
-    .check = default_check,
+/**
+ * 当前空闲的物理页数
+ */
+static void default_nr_free_page(void) {
+	return nr_free;
 }
+
+static void basic_check(void) {
+
+}
+
+static void default_check(void) {
+
+}
+
+/**
+ * 物理内存管理对象(类似面向对象思想)
+ */
+const struct pmm_manager default_pmm_manager = {
+	.name = "default_manager";
+	.init = default_init,
+	.alloc_page = default_alloc_page,
+	.memmap_page = default_memmap_page,
+	.free_page = default_free_page,
+	.nr_free_page = default_nr_free_page,
+	.check = default_check,
+};
+

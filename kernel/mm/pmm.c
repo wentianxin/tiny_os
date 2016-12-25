@@ -64,13 +64,21 @@ static void init_pmm_manager(void) {
 	pmm_manager->init();
 }
 
+/**
+ * 对物理内存进行初步管理
+ * 1. 根据检测到的物理地址（最大地址）得出页数`
+ * 2. 划分帧(不是页表噢), 标记哪些块是被占用的，哪些块是未被占用的
+ * 3. 将这些划分的物理帧添加到对应的链表中
+ */
 static void page_init(void) {
 
-	struct e820map *e820map = (struct e820map *)(0x8000 + KERNBASE);
+	struct e820map *memmap = (struct e820map *)(0x8000 + KERNBASE);
 
 	uint64_t maxpa = 0;
-	for (int i = 0; i < e820map->nr_map; i++) {
-        if (memmap->map[i].type == E820_ARM) {
+	for (int i = 0; i < memmap->nr_map; i++) {
+        uint64_t begin = memmap->map[i].addr;  // 检测块的起始地址
+        uint64_t end   = begin + memmap->map[i].size; // 检测块的末尾地址
+		if (memmap->map[i].type == E820_ARM) {
             if (maxpa < end && begin < KMEMSIZE) {
                 maxpa = end;
             }
@@ -78,15 +86,16 @@ static void page_init(void) {
 	}
 
 	npage = maxpa / PGSIZE; // 一共的需要管理物理页数
-	pages = (struct Page *)ROUNDUP(end, PGSIZE);
+	pages = (struct Page *)ROUNDUP(end, PGSIZE); // pages 指向的是物理地址
 
 	for (int i = 0; i < npage; i++) {
 		((struct Page *)(pages + i))->flag = 0;
 	}
 
-	uintptr_t freemem = pages + (sizeof(struct Page)) * npage;
+	uintptr_t freemem = PADDR(pages + (sizeof(struct Page)) * npage);
 
 	for (int i = 0; i < memmap->nr_map; i++) {
+		// begin 与 end 均为物理地址
 		uint64_t begin = memmap->map[i].addr, end = begin + memmap->map[i].size;
 		if (memmap->map[i].type == E820ARM) {
 			if (begin < freemem) {
@@ -96,6 +105,7 @@ static void page_init(void) {
 				end = KMEMSIZE;
 			}
 			if (begin < end) {
+				// struct page * base = &pages[PPN[begin]];
 				pmm_manager->init_memmap(pa2page(begin), (end - begin) / PGSIZE);
 			}
 		}
@@ -146,16 +156,17 @@ void pmm_init()
 
 	page_init(); // 物理内存管理初始化
 
-
+	// 页目录
 	boot_pgdir = pmm_manager->alloc_pages(1);
 	memset(boot_pgdir, 0, PGSIZE);
 	boot_cr3 = PADDR(boot_pgdir);
 
-
+	// 二级页表
 	boot_map_segment(boot_pgdir, KERNBASE, KMEMSIZE, 0, PTE_W);
 
 	boot_pgdir[0] = boot_pgdir[PDX(KERNBASE)];
 
+	// 开启分页模式
 	enable_paging();
 
 	gdt_init();
