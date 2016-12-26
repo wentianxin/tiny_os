@@ -1,6 +1,13 @@
 #include <asm.h>
 .global start
 
+# 类似一些宏定义
+.set PROT_MODE_CSEG,        0x8                     # kernel code segment selector
+.set PROT_MODE_DSEG,        0x10                    # kernel data segment selector
+.set CR0_PE_ON,             0x1                     # protected mode enable flag
+.set SMAP,                  0x534d4150
+
+.globl start
 start:
 .code16
 	
@@ -21,7 +28,6 @@ start:
 	# 开启A20地址线过程 ： 发送 0xdf 到 0x60，发送 0xd1 到 0x64
 	# 然而再发送之前需要等待键盘输入的缓冲区为空。
 .seta20.1:
-
 	# 通过判断8042的状态寄存器的第2bit，0-缓冲区为空；1-缓冲区不为空
 	# 状态寄存器的值可以通过读取8042芯片的0x64端口得到
 	inb $0x64, %al
@@ -31,13 +37,10 @@ start:
 	movb $0xd1, %al
 	outb %a1, $0x64
 
-
 .seta20.2
-	
 	inb   $0x64, %al
 	testb $0x2,  %al
 	jnz seta20.1
-
 	movb $0xdf, %al # al寄存器是一个8bit的寄存器 （低8位），与 ah寄存器（高8位）组成 ax寄存器 （16位）
 	outb %al, $0x64
 
@@ -65,11 +68,12 @@ start:
 	movw %ax, %fs
 	movw %ax, %gs
 
-	# 设置 ebp寄存器
+	# 设置 kernel 栈地址空间
 	movl $0x0, %ebp
 	# 设置栈的其实位置 0x7c00 (因为栈是向下生长的，所以是从0x7c00 - 0x0)
 	movl $start, %esp
 	call bootmain
+
 
 # 数据段
 .data

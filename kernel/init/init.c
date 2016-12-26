@@ -1,18 +1,37 @@
-int kern_init()
-{
-	pmm_init(); // 物理内存初始化
+#include <types.h>
+#include <stdio.h>
+#include <string.h>
+#include <console.h>
+#include <kdebug.h>
+#include <picirq.h>
+#include <trap.h>
+#include <clock.h>
+#include <intr.h>
+#include <pmm.h>
 
-	pic_init(); // 中断控制初始化
-	idt_init(); // 中断描述符表初始化
+int kern_init(void) __attribute__((noreturn));
 
-	vmm_init();
-	proc_init(); //
+int kern_init(void) {
+    extern char edata[], end[];
+    memset(edata, 0, end - edata);
 
-	ide_init();
-	swap_init();
+    cons_init();                // init the console
 
-	clock_init(); // 时钟中断初始化
-	intr_enable();//
+    const char *message = "(THU.CST) os is loading ...";
+    cprintf("%s\n\n", message);
 
-	cpu_idle();
+    print_kerninfo();
+
+    debug_init();               // init debug registers
+    pmm_init();                 // init physical memory management
+
+    pic_init();                 // init interrupt controller
+    idt_init();                 // init interrupt descriptor table
+
+    clock_init();               // init clock interrupt
+    intr_enable();              // enable irq interrupt
+
+    /* do nothing */
+    while (1);
 }
+
