@@ -8,7 +8,6 @@
  *
  */
 void waitdisk(void) {
-
 	while (inb(0x1F7) & 0xC0 != 0x40)
 		; 
 }
@@ -20,24 +19,25 @@ void waitdisk(void) {
  */
 void readsect(void *dst, uint32_t secno){
 
-	waitdisk();
+    // wait for disk to be ready
+    waitdisk();
 
-	outb(0x1F2, 1);
+    outb(0x1F2, 1);                         // count = 1
+    outb(0x1F3, secno & 0xFF);
+    outb(0x1F4, (secno >> 8) & 0xFF);
+    outb(0x1F5, (secno >> 16) & 0xFF);
+    outb(0x1F6, ((secno >> 24) & 0xF) | 0xE0);
+    outb(0x1F7, 0x20);                      // cmd 0x20 - read sectors
 
-	outb(0x1F3, secno & 0xff);
-	oubb(0x1F4, (secno >> 8)  & 0xff);
-	outb(0x1F5, (secno >> 16) & 0xff);
-	outb(0x1F6, ((secno >> 24) | 0xF0) & 0xff);
+    // wait for disk to be ready
+    waitdisk();
 
-	waitdisk();
-
-	insl(0x1F0, dest, SECTSIZE / 4);
-
+    // read a sector
+    insl(0x1F0, dst, SECTSIZE / 4);
 }
 
 /*
  * 从硬盘扇区中获取 conut 个字节加载到虚拟地址为 va 的内存中
- * 
  */
 void readseg(uintptr_t va, uint32_t count, uint32_t offset) {
 
@@ -83,13 +83,13 @@ void bootmain() {
 		goto bad;
 	}
 	
-	prohdr *ph, *eph;
+	struct prohdr *ph, *eph;
 
-	ph  = (prohdr *) ((uintptr_t)ELFHDR + ELFHDR->e_phoff);
+	ph  = (struct prohdr *) ((uintptr_t)ELFHDR + ELFHDR->e_phoff);
 	eph = ph + ELFHDR->e_phnum;
 
 	for (; ph < eph; ph++) {
-		readseg(ph->p_va, ph->p_memsz, ph->p_offset);
+		readseg(ph->p_va & 0xFFFFFF, ph->p_memsz, ph->p_offset);
 	}
 
 	((void (*)(void)) (ELFHDR->e_entry & 0xFFFFFF))();
