@@ -2,8 +2,8 @@
 .global start
 
 # 类似一些宏定义
-.set PROT_MODE_CSEG,        0x8                     # kernel code segment selector
-.set PROT_MODE_DSEG,        0x10                    # kernel data segment selector
+.set PROT_MODE_CSEG,        0x8                     # kernel 代码段描述符的地址
+.set PROT_MODE_DSEG,        0x10                    # kernel 数据段描述符的地址
 .set CR0_PE_ON,             0x1                     # protected mode enable flag
 .set SMAP,                  0x534d4150
 
@@ -44,22 +44,41 @@ start:
 	movb $0xdf, %al # al寄存器是一个8bit的寄存器 （低8位），与 ah寄存器（高8位）组成 ax寄存器 （16位）
 	outb %al, $0x64
 
+
+#增加物理内存探测, 将探测的数据放到0x8000处, 从0x8000处按照struct e820map结构体填充成员变量
+probe_memory:
+    movl $0, 0x8000
+    xorl %ebx, %ebx
+    movw $0x8004, %di
+start_probe:
+    movl $0xE820, %eax
+    movl $20, %ecx
+    movl $SMAP, %edx
+    int $0x15
+    jnc cont
+    movw $12345, 0x8000
+    jmp finish_probe
+cont:
+    addw $20, %di
+    incl 0x8000
+    cmpl $0, %ebx
+    jnz start_probe
+finish_probe:
+
+
 	# 第三步：从实模式转入到保护模式
-	
+
 	# 载入临时全局描述符表 GDT
 	lgdt gdetsec
-
 	# 开启保护模式
 	movl %cr0, %eax
 	orl $0x1, %eax
 	movl %eax, %cr0
-
 	# ljmp : 长跳转指令 CS:EIP （0x8, $protcseg）= gdt[CS].base_addr + $protcseg = 0x0 * 16 + $protcseg
 	ljmp $PROT_MODE_CSEG, $protcseg
 
 .code32
 .protcseg
-
 	# 重新设定数据段寄存器的值, $PROT_MODE_DSEG 0x10
 	movw $PROT_MODE_DSEG, %ax
 	movw %ax, %ds
@@ -80,9 +99,9 @@ start:
 .p2align 2 # 4字节对齐
 gdt:
 	SEG_NULLASM
-	# type, base, limit(4G)
+	# type, base, limit(4G) 设置代码段和数据段
 	SEG_ASM(STA_X|STA_R, 0x0, 0xffffffff) # 代码段；起始地址: 0x8 ；类型：可读 可执行；限制大小：4G
-	SEG_ASM(STA_R, 0x0, 0xffffffff) # 数据段；起始地址：0x10；类型：可写；限制大小：4G
+	SEG_ASM(STA_R, 0x0, 0xffffffff)       # 数据段；起始地址：0x10；类型：可写；限制大小：4G
 
 gdtsec:
 	.word 0x17 # gdt内存大小0x18 - 1
