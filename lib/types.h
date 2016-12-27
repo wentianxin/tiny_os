@@ -42,10 +42,27 @@ typedef intptr_t off_t;
  * 已知 page_link 为 le （栈是从高地址向低地址生长, 所以起始地址为0）
  * (struct page *) ((&le) - ( (size_t)  ((&(struct page *)0)->page_link) )
  */
-#define offsetof(type, member)
-	( (size_t)  ( &((type *)0)->member ) )
-#define to_struct(ptr, type, memeber) 
-	( (type *)  ( (char *)(ptr) - offsetof(type, memeber)  ) )
+#define offsetof(type, member)                                      \
+    ((size_t)(&((type *)0)->member))
 
+/* *
+ * to_struct - get the struct from a ptr
+ * @ptr:    a struct pointer of member
+ * @type:   the type of the struct this is embedded in
+ * @member: the name of the member within the struct
+ * */
+#define to_struct(ptr, type, member)                               \
+    ((type *)((char *)(ptr) - offsetof(type, member)))
+
+#define ROUNDDOWN(a, n) ({                                          \
+            size_t __a = (size_t)(a);                               \
+            (typeof(a))(__a - __a % (n));                           \
+        })
+
+/* Round up to the nearest multiple of n */
+#define ROUNDUP(a, n) ({                                            \
+            size_t __n = (size_t)(n);                               \
+            (typeof(a))(ROUNDDOWN((size_t)(a) + __n - 1, __n));     \
+        })
 
 #endif
